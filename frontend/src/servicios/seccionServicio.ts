@@ -3,9 +3,11 @@ import api from "./api";
 import { RespuestaApi, Seccion, SeccionFormulario } from "@/tipos";
 
 export const seccionServicio = {
-    async obtenerTodas(): Promise<Seccion[]> {
-        const respuesta = await api.get<RespuestaApi<Seccion[]>>("/secciones");
-        return respuesta.data.datos || [];
+    async obtenerTodas(opciones: { nivelId?: number; gradoId?: number; pagina?: number; limite?: number } = {}): Promise<{ secciones: Seccion[], total: number }> {
+        const respuesta = await api.get<RespuestaApi<{ secciones: Seccion[], total: number }>>("/secciones", {
+            params: opciones
+        });
+        return respuesta.data.datos || { secciones: [], total: 0 };
     },
 
     async obtenerPorId(id: number): Promise<Seccion> {

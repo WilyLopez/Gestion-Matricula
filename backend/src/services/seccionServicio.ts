@@ -1,5 +1,5 @@
-// src/servicios/seccionServicio.ts
-import { SeccionRepositorio } from "../repository/seccionRepositorio";
+// src/services/seccionServicio.ts
+import { SeccionRepositorio, ObtenerTodasSeccionesOpciones } from "../repository/seccionRepositorio";
 import { GradoRepositorio } from "../repository/gradoRepositorio";
 import { ProfesorRepositorio } from "../repository/profesorRepositorio";
 import { Seccion } from "@prisma/client";
@@ -16,8 +16,8 @@ export class SeccionServicio {
         this.profesorRepositorio = new ProfesorRepositorio();
     }
 
-    async obtenerTodas(): Promise<Seccion[]> {
-        return await this.seccionRepositorio.obtenerTodas();
+    async obtenerTodas(opciones: ObtenerTodasSeccionesOpciones): Promise<{ secciones: Seccion[], total: number }> {
+        return await this.seccionRepositorio.obtenerTodas(opciones);
     }
 
     async obtenerPorId(id: number): Promise<Seccion> {

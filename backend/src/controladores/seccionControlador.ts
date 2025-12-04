@@ -15,10 +15,18 @@ export class SeccionControlador {
 
     obtenerTodas = async (req: Request, res: Response): Promise<Response> => {
         try {
-            const secciones = await this.seccionServicio.obtenerTodas();
+            const { nivelId, gradoId, pagina, limite } = req.query;
+            const opciones = {
+                nivelId: nivelId ? parseInt(nivelId as string) : undefined,
+                gradoId: gradoId ? parseInt(gradoId as string) : undefined,
+                pagina: pagina ? parseInt(pagina as string) : undefined,
+                limite: limite ? parseInt(limite as string) : undefined,
+            };
+
+            const resultado = await this.seccionServicio.obtenerTodas(opciones);
             return enviarRespuestaExito(
                 res,
-                secciones,
+                resultado,
                 "Secciones obtenidas exitosamente"
             );
         } catch (error: any) {

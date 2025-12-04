@@ -1,28 +1,54 @@
-// src/repositorios/seccionRepositorio.ts
+// src/repository/seccionRepositorio.ts
 import { prisma } from "../configuracion/baseDatos";
-import { Seccion } from "@prisma/client";
+import { Seccion, Prisma } from "@prisma/client";
 import { SeccionCrear } from "../types";
 
+export interface ObtenerTodasSeccionesOpciones {
+    nivelId?: number;
+    gradoId?: number;
+    pagina?: number;
+    limite?: number;
+}
+
 export class SeccionRepositorio {
-    async obtenerTodas(): Promise<Seccion[]> {
-        return await prisma.seccion.findMany({
-            include: {
-                grado: {
-                    include: {
-                        nivel: true,
+    async obtenerTodas(opciones: ObtenerTodasSeccionesOpciones = {}): Promise<{ secciones: Seccion[], total: number }> {
+        const { nivelId, gradoId, pagina = 1, limite = 10 } = opciones;
+
+        const where: Prisma.SeccionWhereInput = {};
+        if (gradoId) {
+            where.gradoId = gradoId;
+        } else if (nivelId) {
+            where.grado = {
+                nivelId: nivelId,
+            };
+        }
+
+        const [secciones, total] = await prisma.$transaction([
+            prisma.seccion.findMany({
+                where,
+                include: {
+                    grado: {
+                        include: {
+                            nivel: true,
+                        },
+                    },
+                    profesor: true,
+                    matriculas: {
+                        where: {
+                            estado: "activa",
+                        },
                     },
                 },
-                profesor: true,
-                matriculas: {
-                    where: {
-                        estado: "activa",
-                    },
+                skip: (pagina - 1) * limite,
+                take: limite,
+                orderBy: {
+                    id: "asc",
                 },
-            },
-            orderBy: {
-                id: "asc",
-            },
-        });
+            }),
+            prisma.seccion.count({ where }),
+        ]);
+
+        return { secciones, total };
     }
 
     async obtenerPorId(id: number): Promise<Seccion | null> {

@@ -1,54 +1,28 @@
 // src/repository/seccionRepositorio.ts
 import { prisma } from "../configuracion/baseDatos";
 import { Seccion, Prisma } from "@prisma/client";
-import { SeccionCrear } from "../types";
-
-export interface ObtenerTodasSeccionesOpciones {
-    nivelId?: number;
-    gradoId?: number;
-    pagina?: number;
-    limite?: number;
-}
+import { SeccionCrear, SeccionConRelaciones } from "../types";
 
 export class SeccionRepositorio {
-    async obtenerTodas(opciones: ObtenerTodasSeccionesOpciones = {}): Promise<{ secciones: Seccion[], total: number }> {
-        const { nivelId, gradoId, pagina = 1, limite = 10 } = opciones;
-
-        const where: Prisma.SeccionWhereInput = {};
-        if (gradoId) {
-            where.gradoId = gradoId;
-        } else if (nivelId) {
-            where.grado = {
-                nivelId: nivelId,
-            };
-        }
-
-        const [secciones, total] = await prisma.$transaction([
-            prisma.seccion.findMany({
-                where,
-                include: {
-                    grado: {
-                        include: {
-                            nivel: true,
-                        },
-                    },
-                    profesor: true,
-                    matriculas: {
-                        where: {
-                            estado: "activa",
-                        },
+    async obtenerTodas(): Promise<SeccionConRelaciones[]> {
+        return await prisma.seccion.findMany({
+            include: {
+                grado: {
+                    include: {
+                        nivel: true,
                     },
                 },
-                skip: (pagina - 1) * limite,
-                take: limite,
-                orderBy: {
-                    id: "asc",
+                profesor: true,
+                matriculas: {
+                    where: {
+                        estado: "activa",
+                    },
                 },
-            }),
-            prisma.seccion.count({ where }),
-        ]);
-
-        return { secciones, total };
+            },
+            orderBy: {
+                id: "asc",
+            },
+        });
     }
 
     async obtenerPorId(id: number): Promise<Seccion | null> {

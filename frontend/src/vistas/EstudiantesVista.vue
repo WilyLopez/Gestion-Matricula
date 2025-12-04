@@ -1,20 +1,28 @@
 <!-- src/vistas/EstudiantesVista.vue -->
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { Estudiante, EstudianteFormulario } from "@/tipos";
 import { estudianteServicio } from "@/servicios/estudianteServicio";
 import TablaEstudiantes from "@/components/estudiantes/TablaEstudiantes.vue";
 import FormularioEstudiante from "@/components/estudiantes/FormularioEstudiante.vue";
 import ModalConfirmacion from "@/components/comunes/ModalConfirmacion.vue";
+import Paginacion from "@/components/comunes/Paginacion.vue";
 import Cargando from "@/components/comunes/Cargando.vue";
 import Alerta from "@/components/comunes/Alerta.vue";
 import { useAlerta } from "@/composables/useAlerta";
-import { useRouter } from 'vue-router'; // Keep for now, might be used elsewhere
+import { useRouter } from 'vue-router';
 
 const { alerta, mostrarAlerta, cerrarAlerta } = useAlerta();
 const estudiantes = ref<Estudiante[]>([]);
 const cargando = ref(true);
-const router = useRouter(); // Keep for now
+const router = useRouter();
+
+// Filtros y Paginación
+const busqueda = ref("");
+const estadoFiltro = ref<"matriculado" | "sin-matricula" | "">("");
+const paginaActual = ref(1);
+const limitePorPagina = ref(10);
+const totalEstudiantes = ref(0);
 
 const mostrarFormulario = ref(false);
 const estudianteParaEditar = ref<Estudiante | null>(null);
@@ -28,13 +36,39 @@ const estudianteParaVer = ref<Estudiante | null>(null);
 const cargarEstudiantes = async () => {
     cargando.value = true;
     try {
-        estudiantes.value = await estudianteServicio.obtenerTodos();
+        const opciones = {
+            pagina: paginaActual.value,
+            limite: limitePorPagina.value,
+            busqueda: busqueda.value,
+            estado: estadoFiltro.value,
+        };
+        const respuesta = await estudianteServicio.obtenerTodos(opciones);
+        estudiantes.value = respuesta.registros;
+        totalEstudiantes.value = respuesta.total;
     } catch (error: any) {
         mostrarAlerta("danger", `Error al cargar los estudiantes: ${error.message}`);
     } finally {
         cargando.value = false;
     }
 };
+
+let debounceTimer: number;
+watch(busqueda, () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        paginaActual.value = 1;
+        cargarEstudiantes();
+    }, 500); // 500ms de retraso
+});
+
+watch([estadoFiltro, paginaActual], () => {
+    if (paginaActual.value) {
+        cargarEstudiantes();
+    } else {
+        paginaActual.value = 1;
+    }
+});
+
 
 onMounted(cargarEstudiantes);
 
@@ -112,8 +146,29 @@ const cerrarDetalles = () => {
                 Añadir Estudiante
             </button>
         </div>
-
-        <div class="card shadow">
+                <div class="card shadow">
+            <div class="card-header">
+                <div class="row gy-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input
+                                type="text"
+                                class="form-control"
+                                placeholder="Buscar por nombre, apellidos o DNI..."
+                                v-model="busqueda"
+                            />
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" v-model="estadoFiltro">
+                            <option value="">Todos los estados</option>
+                            <option value="matriculado">Matriculado</option>
+                            <option value="sin-matricula">Sin Matrícula</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             <div class="card-body">
                 <Cargando v-if="cargando" />
                 <TablaEstudiantes
@@ -122,6 +177,14 @@ const cerrarDetalles = () => {
                     @ver="verDetalles"
                     @editar="abrirFormulario"
                     @eliminar="preguntarEliminar"
+                />
+            </div>
+            <div class="card-footer d-flex justify-content-end">
+                <Paginacion
+                    :pagina-actual="paginaActual"
+                    :total-items="totalEstudiantes"
+                    :items-por-pagina="limitePorPagina"
+                    @update:pagina-actual="paginaActual = $event"
                 />
             </div>
         </div>

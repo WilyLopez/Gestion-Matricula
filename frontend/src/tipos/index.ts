@@ -1,11 +1,17 @@
 // src/tipos/index.ts
 
+export interface Paginated<T> {
+    registros: T[];
+    total: number;
+}
+
 export interface RespuestaApi<T = any> {
     exito: boolean;
     mensaje: string;
     datos?: T;
     error?: string;
 }
+
 
 export interface Nivel {
     id: number;

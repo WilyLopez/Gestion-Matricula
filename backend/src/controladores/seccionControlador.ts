@@ -1,10 +1,7 @@
 // src/controladores/seccionControlador.ts
 import { Request, Response } from "express";
 import { SeccionServicio } from "../services/seccionServicio";
-import {
-    enviarRespuestaExito,
-    enviarRespuestaError,
-} from "../utils/respuesta";
+import { enviarRespuestaExito, enviarRespuestaError } from "../utils/respuesta";
 
 export class SeccionControlador {
     private seccionServicio: SeccionServicio;
@@ -15,15 +12,7 @@ export class SeccionControlador {
 
     obtenerTodas = async (req: Request, res: Response): Promise<Response> => {
         try {
-            const { nivelId, gradoId, pagina, limite } = req.query;
-            const opciones = {
-                nivelId: nivelId ? parseInt(nivelId as string) : undefined,
-                gradoId: gradoId ? parseInt(gradoId as string) : undefined,
-                pagina: pagina ? parseInt(pagina as string) : undefined,
-                limite: limite ? parseInt(limite as string) : undefined,
-            };
-
-            const resultado = await this.seccionServicio.obtenerTodas(opciones);
+            const resultado = await this.seccionServicio.obtenerTodas();
             return enviarRespuestaExito(
                 res,
                 resultado,

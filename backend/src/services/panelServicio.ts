@@ -42,8 +42,8 @@ export class PanelServicio {
             throw new Error("No hay un año académico activo");
         }
 
-        const totalEstudiantes = await this.estudianteRepositorio.contar();
-        const totalProfesores = await this.profesorRepositorio.contar();
+        const totalEstudiantes = await this.estudianteRepositorio.contarTodos();
+        const totalProfesores = await this.profesorRepositorio.contarTodos();
         const totalEstudiantesMatriculados =
             await this.matriculaRepositorio.contarMatriculasActivas(
                 anioActivo.id

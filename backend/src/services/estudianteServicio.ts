@@ -1,8 +1,14 @@
 // src/services/estudianteServicio.ts
 import { EstudianteRepositorio } from "../repository/estudianteRepositorio";
 import { Estudiante } from "@prisma/client";
-import { EstudianteCrear, EstudianteActualizar } from "../types";
+import { EstudianteCrear, EstudianteActualizar, Paginated } from "../types";
 
+type OpcionesFiltro = {
+    pagina?: number;
+    limite?: number;
+    busqueda?: string;
+    estado?: "matriculado" | "sin-matricula";
+};
 export class EstudianteServicio {
     private estudianteRepositorio: EstudianteRepositorio;
 
@@ -10,8 +16,13 @@ export class EstudianteServicio {
         this.estudianteRepositorio = new EstudianteRepositorio();
     }
 
-    async obtenerTodos(): Promise<Estudiante[]> {
-        return await this.estudianteRepositorio.obtenerTodos();
+    async obtenerTodos(opciones: OpcionesFiltro = {}): Promise<Paginated<Estudiante>> {
+        const [registros, total] = await Promise.all([
+            this.estudianteRepositorio.obtenerTodos(opciones),
+            this.estudianteRepositorio.contarTodos(opciones)
+        ]);
+
+        return { registros, total };
     }
 
     async obtenerPorId(id: number): Promise<Estudiante> {
@@ -22,14 +33,6 @@ export class EstudianteServicio {
         }
 
         return estudiante;
-    }
-
-    async buscar(termino: string): Promise<Estudiante[]> {
-        if (!termino || termino.trim() === "") {
-            return await this.obtenerTodos();
-        }
-
-        return await this.estudianteRepositorio.buscar(termino.trim());
     }
 
     async crear(datos: EstudianteCrear): Promise<Estudiante> {
@@ -85,9 +88,7 @@ export class EstudianteServicio {
         return await this.estudianteRepositorio.eliminar(id);
     }
 
-    async contar(): Promise<number> {
-        return await this.estudianteRepositorio.contar();
-    }
+
 
     private validarDatosEstudiante(datos: EstudianteCrear): void {
         if (!datos.nombres || datos.nombres.trim() === "") {

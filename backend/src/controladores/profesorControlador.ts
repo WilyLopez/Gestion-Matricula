@@ -15,7 +15,19 @@ export class ProfesorControlador {
 
     obtenerTodos = async (req: Request, res: Response): Promise<Response> => {
         try {
-            const profesores = await this.profesorServicio.obtenerTodos();
+            const {
+                pagina = 1,
+                limite = 10,
+                busqueda = '',
+            } = req.query;
+
+            const opciones = {
+                pagina: Number(pagina),
+                limite: Number(limite),
+                busqueda: String(busqueda),
+            };
+
+            const profesores = await this.profesorServicio.obtenerTodos(opciones);
             return enviarRespuestaExito(
                 res,
                 profesores,
@@ -48,25 +60,6 @@ export class ProfesorControlador {
                 "Error al obtener profesor",
                 error.message,
                 404
-            );
-        }
-    };
-
-    buscar = async (req: Request, res: Response): Promise<Response> => {
-        try {
-            const { q } = req.query;
-            const profesores = await this.profesorServicio.buscar(q as string);
-            return enviarRespuestaExito(
-                res,
-                profesores,
-                "Búsqueda realizada exitosamente"
-            );
-        } catch (error: any) {
-            return enviarRespuestaError(
-                res,
-                "Error al buscar profesores",
-                error.message,
-                500
             );
         }
     };

@@ -1,9 +1,21 @@
 // src/services/seccionServicio.ts
-import { SeccionRepositorio, ObtenerTodasSeccionesOpciones } from "../repository/seccionRepositorio";
+import { SeccionRepositorio } from "../repository/seccionRepositorio";
 import { GradoRepositorio } from "../repository/gradoRepositorio";
 import { ProfesorRepositorio } from "../repository/profesorRepositorio";
-import { Seccion } from "@prisma/client";
-import { SeccionCrear, SeccionActualizar } from "../types";
+import { Seccion, Prisma } from "@prisma/client";
+import {
+    SeccionCrear,
+    SeccionActualizar,
+    SeccionConRelaciones,
+} from "../types";
+
+// Define el tipo localmente ya que no está exportado desde el repositorio
+type ObtenerTodasSeccionesOpciones = {
+    pagina?: number;
+    limite?: number;
+    busqueda?: string;
+    gradoId?: number;
+};
 
 export class SeccionServicio {
     private seccionRepositorio: SeccionRepositorio;
@@ -16,32 +28,34 @@ export class SeccionServicio {
         this.profesorRepositorio = new ProfesorRepositorio();
     }
 
-    async obtenerTodas(opciones: ObtenerTodasSeccionesOpciones): Promise<{ secciones: Seccion[], total: number }> {
-        return await this.seccionRepositorio.obtenerTodas(opciones);
+    async obtenerTodas(): Promise<SeccionConRelaciones[]> {
+        return await this.seccionRepositorio.obtenerTodas();
     }
 
-    async obtenerPorId(id: number): Promise<Seccion> {
+    async obtenerPorId(id: number): Promise<SeccionConRelaciones> {
         const seccion = await this.seccionRepositorio.obtenerPorId(id);
 
         if (!seccion) {
             throw new Error("Sección no encontrada");
         }
 
-        return seccion;
+        return seccion as SeccionConRelaciones;
     }
 
-    async obtenerPorGrado(gradoId: number): Promise<Seccion[]> {
+    async obtenerPorGrado(gradoId: number): Promise<SeccionConRelaciones[]> {
         const grado = await this.gradoRepositorio.obtenerPorId(gradoId);
 
         if (!grado) {
             throw new Error("Grado no encontrado");
         }
 
-        return await this.seccionRepositorio.obtenerPorGrado(gradoId);
+        return (await this.seccionRepositorio.obtenerPorGrado(
+            gradoId
+        )) as SeccionConRelaciones[];
     }
 
-    async obtenerConVacantes(): Promise<Seccion[]> {
-        return await this.seccionRepositorio.obtenerConVacantes();
+    async obtenerConVacantes(): Promise<SeccionConRelaciones[]> {
+        return (await this.seccionRepositorio.obtenerConVacantes()) as SeccionConRelaciones[];
     }
 
     async crear(datos: SeccionCrear): Promise<Seccion> {

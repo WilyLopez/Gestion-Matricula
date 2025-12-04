@@ -1,13 +1,28 @@
 // src/servicios/profesorServicio.ts
 import api from "./api";
-import { RespuestaApi, Profesor, ProfesorFormulario } from "@/tipos";
+import { RespuestaApi, Profesor, ProfesorFormulario, Paginated } from "@/tipos";
+
+type OpcionesFiltro = {
+    pagina?: number;
+    limite?: number;
+    busqueda?: string;
+};
 
 export const profesorServicio = {
-    async obtenerTodos(): Promise<Profesor[]> {
-        const respuesta = await api.get<RespuestaApi<Profesor[]>>(
-            "/profesores"
+    async obtenerTodos(opciones: OpcionesFiltro = {}): Promise<Paginated<Profesor>> {
+        const { pagina = 1, limite = 10, busqueda } = opciones;
+
+        const params = new URLSearchParams();
+        params.append("pagina", String(pagina));
+        params.append("limite", String(limite));
+        if (busqueda) {
+            params.append("busqueda", busqueda);
+        }
+
+        const respuesta = await api.get<RespuestaApi<Paginated<Profesor>>>(
+            `/profesores?${params.toString()}`
         );
-        return respuesta.data.datos || [];
+        return respuesta.data.datos || { registros: [], total: 0 };
     },
 
     async obtenerPorId(id: number): Promise<Profesor> {
@@ -15,16 +30,6 @@ export const profesorServicio = {
             `/profesores/${id}`
         );
         return respuesta.data.datos as Profesor;
-    },
-
-    async buscar(termino: string): Promise<Profesor[]> {
-        const respuesta = await api.get<RespuestaApi<Profesor[]>>(
-            "/profesores/buscar",
-            {
-                params: { q: termino },
-            }
-        );
-        return respuesta.data.datos || [];
     },
 
     async crear(datos: ProfesorFormulario): Promise<Profesor> {

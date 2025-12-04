@@ -1,7 +1,13 @@
 // src/servicios/profesorServicio.ts
 import { ProfesorRepositorio } from "../repository/profesorRepositorio";
 import { Profesor } from "@prisma/client";
-import { ProfesorCrear, ProfesorActualizar } from "../types";
+import { ProfesorCrear, ProfesorActualizar, ProfesorConRelaciones, Paginated } from "../types";
+
+type OpcionesFiltro = {
+    pagina?: number;
+    limite?: number;
+    busqueda?: string;
+};
 
 export class ProfesorServicio {
     private profesorRepositorio: ProfesorRepositorio;
@@ -10,11 +16,16 @@ export class ProfesorServicio {
         this.profesorRepositorio = new ProfesorRepositorio();
     }
 
-    async obtenerTodos(): Promise<Profesor[]> {
-        return await this.profesorRepositorio.obtenerTodos();
+    async obtenerTodos(opciones: OpcionesFiltro = {}): Promise<Paginated<ProfesorConRelaciones>> {
+        const [registros, total] = await Promise.all([
+            this.profesorRepositorio.obtenerTodos(opciones),
+            this.profesorRepositorio.contarTodos(opciones)
+        ]);
+
+        return { registros, total };
     }
 
-    async obtenerPorId(id: number): Promise<Profesor> {
+    async obtenerPorId(id: number): Promise<ProfesorConRelaciones> {
         const profesor = await this.profesorRepositorio.obtenerPorId(id);
 
         if (!profesor) {
@@ -22,14 +33,6 @@ export class ProfesorServicio {
         }
 
         return profesor;
-    }
-
-    async buscar(termino: string): Promise<Profesor[]> {
-        if (!termino || termino.trim() === "") {
-            return await this.obtenerTodos();
-        }
-
-        return await this.profesorRepositorio.buscar(termino.trim());
     }
 
     async crear(datos: ProfesorCrear): Promise<Profesor> {
@@ -71,10 +74,6 @@ export class ProfesorServicio {
         }
 
         return await this.profesorRepositorio.eliminar(id);
-    }
-
-    async contar(): Promise<number> {
-        return await this.profesorRepositorio.contar();
     }
 
     private validarDatosProfesor(datos: ProfesorCrear): void {

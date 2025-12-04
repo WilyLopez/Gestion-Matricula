@@ -1,11 +1,49 @@
 // src/tipos/index.ts
 
+import { Prisma } from '@prisma/client'; // Importar Prisma para los tipos de payload
+
+export interface Paginated<T> {
+    registros: T[];
+    total: number;
+}
 export interface RespuestaApi<T = any> {
     exito: boolean;
     mensaje: string;
     datos?: T;
     error?: string;
 }
+
+// Definir el tipo para Seccion con sus relaciones incluidas
+export type SeccionConRelaciones = Prisma.SeccionGetPayload<{
+    include: {
+        grado: {
+            include: { nivel: true }
+        },
+        profesor: true,
+        matriculas: {
+            where: { estado: "activa" }
+        }
+    }
+}>;
+
+export type ProfesorConRelaciones = Prisma.ProfesorGetPayload<{
+    include: {
+        secciones: {
+            include: {
+                grado: {
+                    include: {
+                        nivel: true;
+                    };
+                };
+                matriculas: {
+                    where: {
+                        estado: "activa";
+                    };
+                };
+            };
+        };
+    };
+}>;
 
 export interface EstudianteCrear {
     nombres: string;

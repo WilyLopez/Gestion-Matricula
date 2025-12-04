@@ -1,11 +1,12 @@
 <!-- src/vistas/ProfesoresVista.vue -->
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { Profesor, ProfesorFormulario } from "@/tipos";
 import { profesorServicio } from "@/servicios/profesorServicio";
 import TablaProfesores from "@/components/profesores/TablaProfesores.vue";
 import FormularioProfesor from "@/components/profesores/FormularioProfesor.vue";
 import ModalConfirmacion from "@/components/comunes/ModalConfirmacion.vue";
+import Paginacion from "@/components/comunes/Paginacion.vue";
 import Cargando from "@/components/comunes/Cargando.vue";
 import Alerta from "@/components/comunes/Alerta.vue";
 import { useAlerta } from "@/composables/useAlerta";
@@ -13,6 +14,12 @@ import { useAlerta } from "@/composables/useAlerta";
 const { alerta, mostrarAlerta, cerrarAlerta } = useAlerta();
 const profesores = ref<Profesor[]>([]);
 const cargando = ref(true);
+
+// Filtros y Paginación
+const busqueda = ref("");
+const paginaActual = ref(1);
+const limitePorPagina = ref(10);
+const totalProfesores = ref(0);
 
 const mostrarFormulario = ref(false);
 const profesorParaEditar = ref<Profesor | null>(null);
@@ -26,13 +33,33 @@ const profesorParaVer = ref<Profesor | null>(null);
 const cargarProfesores = async () => {
     cargando.value = true;
     try {
-        profesores.value = await profesorServicio.obtenerTodos();
+        const opciones = {
+            pagina: paginaActual.value,
+            limite: limitePorPagina.value,
+            busqueda: busqueda.value,
+        };
+        const respuesta = await profesorServicio.obtenerTodos(opciones);
+        profesores.value = respuesta.registros;
+        totalProfesores.value = respuesta.total;
     } catch (error: any) {
         mostrarAlerta("danger", `Error al cargar los profesores: ${error.message}`);
     } finally {
         cargando.value = false;
     }
 };
+
+let debounceTimer: number;
+watch(busqueda, () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        paginaActual.value = 1;
+        cargarProfesores();
+    }, 500); // 500ms de retraso
+});
+
+watch(paginaActual, () => {
+    cargarProfesores();
+});
 
 onMounted(cargarProfesores);
 
@@ -112,6 +139,21 @@ const cerrarDetalles = () => {
         </div>
 
         <div class="card shadow">
+            <div class="card-header">
+                <div class="row gy-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input
+                                type="text"
+                                class="form-control"
+                                placeholder="Buscar por nombre, apellidos, DNI o email..."
+                                v-model="busqueda"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="card-body">
                 <Cargando v-if="cargando" />
                 <TablaProfesores
@@ -120,6 +162,14 @@ const cerrarDetalles = () => {
                     @ver="verDetalles"
                     @editar="abrirFormulario"
                     @eliminar="preguntarEliminar"
+                />
+            </div>
+            <div class="card-footer d-flex justify-content-end">
+                <Paginacion
+                    :pagina-actual="paginaActual"
+                    :total-items="totalProfesores"
+                    :items-por-pagina="limitePorPagina"
+                    @update:pagina-actual="paginaActual = $event"
                 />
             </div>
         </div>

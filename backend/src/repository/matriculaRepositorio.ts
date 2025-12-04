@@ -1,7 +1,6 @@
-// src/repositorios/matriculaRepositorio.ts
 import { prisma } from "../configuracion/baseDatos";
 import { Matricula } from "@prisma/client";
-import { MatriculaCrear } from "../types";
+import { MatriculaCrear, MatriculaActualizar } from "../types";
 
 export class MatriculaRepositorio {
     async obtenerTodas(): Promise<Matricula[]> {
@@ -163,7 +162,7 @@ export class MatriculaRepositorio {
 
     async actualizar(
         id: number,
-        datos: Partial<MatriculaCrear>
+        datos: Partial<MatriculaCrear> | MatriculaActualizar
     ): Promise<Matricula> {
         return await prisma.matricula.update({
             where: { id },

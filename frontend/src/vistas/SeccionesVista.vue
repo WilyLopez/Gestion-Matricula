@@ -20,6 +20,9 @@ const seccionParaEditar = ref<Seccion | null>(null);
 const mostrarConfirmacion = ref(false);
 const seccionParaEliminar = ref<Seccion | null>(null);
 
+const mostrarDetalles = ref(false);
+const seccionParaVer = ref<Seccion | null>(null);
+
 const cargarSecciones = async () => {
     cargando.value = true;
     try {
@@ -78,9 +81,20 @@ const confirmarEliminacion = async () => {
         await cargarSecciones();
         cerrarConfirmacion();
     } catch (error: any) {
-        mostrarAlerta("danger", `Error al eliminar la sección: ${error.message}`);
+        const mensajeError = error.response?.data?.error || `Error al eliminar la sección: ${error.message}`;
+        mostrarAlerta("danger", mensajeError);
         cerrarConfirmacion();
     }
+};
+
+const verDetalles = (seccion: Seccion) => {
+    seccionParaVer.value = seccion;
+    mostrarDetalles.value = true;
+};
+
+const cerrarDetalles = () => {
+    mostrarDetalles.value = false;
+    seccionParaVer.value = null;
 };
 
 </script>
@@ -103,6 +117,7 @@ const confirmarEliminacion = async () => {
                 <TablaSecciones
                     v-else
                     :secciones="secciones"
+                    @ver="verDetalles"
                     @editar="abrirFormulario"
                     @eliminar="preguntarEliminar"
                 />
@@ -130,6 +145,51 @@ const confirmarEliminacion = async () => {
             </div>
         </div>
         <div v-if="mostrarFormulario" class="modal-backdrop fade show"></div>
+
+        <!-- Modal para Detalles -->
+        <div v-if="mostrarDetalles && seccionParaVer" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Detalles de la Sección</h5>
+                        <button type="button" class="btn-close" @click="cerrarDetalles"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <strong>Nivel:</strong>
+                                <p>{{ seccionParaVer.grado?.nivel?.nombre }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Grado:</strong>
+                                <p>{{ seccionParaVer.grado?.nombre }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Nombre:</strong>
+                                <p>{{ seccionParaVer.nombre }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Turno:</strong>
+                                <p class="text-capitalize">{{ seccionParaVer.turno }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Capacidad Máxima:</strong>
+                                <p>{{ seccionParaVer.capacidadMaxima }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Profesor Tutor:</strong>
+                                <p v-if="seccionParaVer.profesor">{{ seccionParaVer.profesor.nombres }} {{ seccionParaVer.profesor.apellidos }}</p>
+                                <p v-else>Sin asignar</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="cerrarDetalles">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="mostrarDetalles" class="modal-backdrop fade show"></div>
 
         <!-- Modal de Confirmación -->
         <ModalConfirmacion

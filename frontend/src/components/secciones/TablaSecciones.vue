@@ -46,13 +46,16 @@ const seccionesConDatos = computed(() => {
   });
 });
 
-const manejarAccion = (accion: string, seccion: any) => {
+const manejarAccion = (accion: string, item: any) => {
+  const seccionOriginal = props.secciones.find(s => s.id === item.id);
+  if (!seccionOriginal) return;
+
   if (accion === 'ver') {
-    emit('ver', seccion);
+    emit('ver', seccionOriginal);
   } else if (accion === 'editar') {
-    emit('editar', seccion);
+    emit('editar', seccionOriginal);
   } else if (accion === 'eliminar') {
-    emit('eliminar', seccion);
+    emit('eliminar', seccionOriginal);
   }
 };
 

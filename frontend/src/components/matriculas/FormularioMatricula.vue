@@ -39,6 +39,7 @@ const nivelSeleccionado = ref<number | null>(null);
 const gradoSeleccionado = ref<number | null>(null);
 const cargandoDatos = ref(false);
 const busquedaEstudiante = ref("");
+const cargandoEstudiantes = ref(false);
 
 const erroresValidacion = ref<string[]>([]);
 const advertenciasValidacion = ref<string[]>([]);
@@ -66,19 +67,6 @@ const campos = reactive<Record<string, CampoValidacion>>({
     },
 });
 
-const estudiantesFiltrados = computed(() => {
-    if (!busquedaEstudiante.value.trim()) {
-        return estudiantes.value;
-    }
-    const termino = busquedaEstudiante.value.toLowerCase();
-    return estudiantes.value.filter(
-        (e) =>
-            e.nombres.toLowerCase().includes(termino) ||
-            e.apellidos.toLowerCase().includes(termino) ||
-            e.dni.includes(termino)
-    );
-});
-
 const estudianteSeleccionado = computed(() => {
     return (
         estudiantes.value.find((e) => e.id === formulario.estudianteId) || null
@@ -102,6 +90,11 @@ onMounted(async () => {
     await cargarDatos();
 });
 
+// Watch para buscar estudiantes cuando cambia el término de búsqueda
+watch(busquedaEstudiante, async (nuevoValor) => {
+    await buscarEstudiantes(nuevoValor);
+});
+
 watch([estudianteSeleccionado, seccionSeleccionada], () => {
     if (formulario.estudianteId && formulario.seccionId) {
         validarFormularioCompleto();
@@ -111,17 +104,22 @@ watch([estudianteSeleccionado, seccionSeleccionada], () => {
 const cargarDatos = async () => {
     cargandoDatos.value = true;
     try {
-        [
-            estudiantes.value,
-            niveles.value,
-            anioAcademico.value,
-            matriculasExistentes.value,
-        ] = await Promise.all([
-            estudianteServicio.obtenerTodos(),
-            nivelServicio.obtenerTodos(),
-            anioAcademicoServicio.obtenerActivo(),
-            matriculaServicio.obtenerTodas(),
-        ]);
+        const [estudiantesData, nivelesData, anioData, matriculasData] =
+            await Promise.all([
+                estudianteServicio.obtenerTodos({
+                    limite: 100,
+                    estado: "sin-matricula",
+                }),
+                nivelServicio.obtenerTodos(),
+                anioAcademicoServicio.obtenerActivo(),
+                matriculaServicio.obtenerTodas(),
+            ]);
+
+        // Acceder correctamente a la propiedad 'registros' del objeto Paginated
+        estudiantes.value = estudiantesData.registros;
+        niveles.value = nivelesData;
+        anioAcademico.value = anioData;
+        matriculasExistentes.value = matriculasData;
 
         if (anioAcademico.value) {
             formulario.anioAcademicoId = anioAcademico.value.id;
@@ -134,6 +132,22 @@ const cargarDatos = async () => {
         mostrarErrores.value = true;
     } finally {
         cargandoDatos.value = false;
+    }
+};
+
+const buscarEstudiantes = async (termino: string) => {
+    cargandoEstudiantes.value = true;
+    try {
+        const resultado = await estudianteServicio.obtenerTodos({
+            limite: 100,
+            busqueda: termino.trim() || undefined,
+            estado: "sin-matricula",
+        });
+        estudiantes.value = resultado.registros;
+    } catch (error) {
+        console.error("Error al buscar estudiantes:", error);
+    } finally {
+        cargandoEstudiantes.value = false;
     }
 };
 
@@ -269,13 +283,24 @@ const obtenerInfoSeccion = (seccion: Seccion) => {
                     <label for="busquedaEstudiante" class="form-label">
                         Buscar Estudiante <span class="text-danger">*</span>
                     </label>
-                    <input
-                        type="text"
-                        class="form-control mb-2"
-                        id="busquedaEstudiante"
-                        v-model="busquedaEstudiante"
-                        placeholder="Buscar por nombre, apellidos o DNI..."
-                    />
+                    <div class="input-group mb-2">
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="busquedaEstudiante"
+                            v-model="busquedaEstudiante"
+                            placeholder="Buscar por nombre, apellidos o DNI..."
+                        />
+                        <span
+                            v-if="cargandoEstudiantes"
+                            class="input-group-text"
+                        >
+                            <span
+                                class="spinner-border spinner-border-sm"
+                                role="status"
+                            ></span>
+                        </span>
+                    </div>
                     <select
                         class="form-select"
                         :class="{
@@ -293,11 +318,11 @@ const obtenerInfoSeccion = (seccion: Seccion) => {
                             )
                         "
                         @blur="marcarTocado('estudianteId')"
-                        :disabled="cargandoDatos"
+                        :disabled="cargandoDatos || cargandoEstudiantes"
                     >
                         <option value="0">Seleccione un estudiante</option>
                         <option
-                            v-for="estudiante in estudiantesFiltrados"
+                            v-for="estudiante in estudiantes"
                             :key="estudiante.id"
                             :value="estudiante.id"
                         >
@@ -305,6 +330,16 @@ const obtenerInfoSeccion = (seccion: Seccion) => {
                             {{ estudiante.apellidos }} - {{ estudiante.dni }}
                         </option>
                     </select>
+                    <small
+                        v-if="
+                            estudiantes.length === 0 &&
+                            !cargandoDatos &&
+                            !cargandoEstudiantes
+                        "
+                        class="text-muted"
+                    >
+                        No se encontraron estudiantes disponibles para matrícula
+                    </small>
                     <div
                         v-if="
                             campos.estudianteId.tocado &&
@@ -537,5 +572,11 @@ const obtenerInfoSeccion = (seccion: Seccion) => {
 
 .card.bg-light {
     border: 1px solid #dee2e6;
+}
+
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.15em;
 }
 </style>

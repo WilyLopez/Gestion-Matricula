@@ -9,18 +9,21 @@ import ModalConfirmacion from "@/components/comunes/ModalConfirmacion.vue";
 import Cargando from "@/components/comunes/Cargando.vue";
 import Alerta from "@/components/comunes/Alerta.vue";
 import { useAlerta } from "@/composables/useAlerta";
-import { useRouter } from 'vue-router';
+import { useRouter } from 'vue-router'; // Keep for now, might be used elsewhere
 
 const { alerta, mostrarAlerta, cerrarAlerta } = useAlerta();
 const estudiantes = ref<Estudiante[]>([]);
 const cargando = ref(true);
-const router = useRouter();
+const router = useRouter(); // Keep for now
 
 const mostrarFormulario = ref(false);
 const estudianteParaEditar = ref<Estudiante | null>(null);
 
 const mostrarConfirmacion = ref(false);
 const estudianteParaEliminar = ref<Estudiante | null>(null);
+
+const mostrarDetalles = ref(false);
+const estudianteParaVer = ref<Estudiante | null>(null);
 
 const cargarEstudiantes = async () => {
     cargando.value = true;
@@ -80,13 +83,20 @@ const confirmarEliminacion = async () => {
         await cargarEstudiantes();
         cerrarConfirmacion();
     } catch (error: any) {
-        mostrarAlerta("danger", `Error al eliminar el estudiante: ${error.message}`);
+        const mensajeError = error.response?.data?.error || `Error al eliminar el estudiante: ${error.message}`;
+        mostrarAlerta("danger", mensajeError);
         cerrarConfirmacion();
     }
 };
 
 const verDetalles = (estudiante: Estudiante) => {
-    router.push({ name: 'DetalleEstudiante', params: { id: estudiante.id } });
+    estudianteParaVer.value = estudiante;
+    mostrarDetalles.value = true;
+};
+
+const cerrarDetalles = () => {
+    mostrarDetalles.value = false;
+    estudianteParaVer.value = null;
 };
 
 </script>
@@ -137,6 +147,58 @@ const verDetalles = (estudiante: Estudiante) => {
             </div>
         </div>
         <div v-if="mostrarFormulario" class="modal-backdrop fade show"></div>
+
+        <!-- Modal para Detalles -->
+        <div v-if="mostrarDetalles && estudianteParaVer" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Detalles del Estudiante</h5>
+                        <button type="button" class="btn-close" @click="cerrarDetalles"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <strong>Nombres:</strong>
+                                <p>{{ estudianteParaVer.nombres }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Apellidos:</strong>
+                                <p>{{ estudianteParaVer.apellidos }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>DNI:</strong>
+                                <p>{{ estudianteParaVer.dni }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Fecha de Nacimiento:</strong>
+                                <p>{{ new Date(estudianteParaVer.fechaNacimiento).toLocaleDateString('es-ES') }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Teléfono:</strong>
+                                <p>{{ estudianteParaVer.telefono }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Dirección:</strong>
+                                <p>{{ estudianteParaVer.direccion }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Fecha de Creación:</strong>
+                                <p>{{ new Date(estudianteParaVer.creadoEn).toLocaleDateString('es-ES') }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Última Actualización:</strong>
+                                <p>{{ new Date(estudianteParaVer.actualizadoEn).toLocaleDateString('es-ES') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="cerrarDetalles">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="mostrarDetalles" class="modal-backdrop fade show"></div>
 
         <!-- Modal de Confirmación -->
         <ModalConfirmacion

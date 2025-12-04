@@ -20,6 +20,9 @@ const profesorParaEditar = ref<Profesor | null>(null);
 const mostrarConfirmacion = ref(false);
 const profesorParaEliminar = ref<Profesor | null>(null);
 
+const mostrarDetalles = ref(false);
+const profesorParaVer = ref<Profesor | null>(null);
+
 const cargarProfesores = async () => {
     cargando.value = true;
     try {
@@ -78,9 +81,20 @@ const confirmarEliminacion = async () => {
         await cargarProfesores();
         cerrarConfirmacion();
     } catch (error: any) {
-        mostrarAlerta("danger", `Error al eliminar el profesor: ${error.message}`);
+        const mensajeError = error.response?.data?.error || `Error al eliminar el profesor: ${error.message}`;
+        mostrarAlerta("danger", mensajeError);
         cerrarConfirmacion();
     }
+};
+
+const verDetalles = (profesor: Profesor) => {
+    profesorParaVer.value = profesor;
+    mostrarDetalles.value = true;
+};
+
+const cerrarDetalles = () => {
+    mostrarDetalles.value = false;
+    profesorParaVer.value = null;
 };
 
 </script>
@@ -103,6 +117,7 @@ const confirmarEliminacion = async () => {
                 <TablaProfesores
                     v-else
                     :profesores="profesores"
+                    @ver="verDetalles"
                     @editar="abrirFormulario"
                     @eliminar="preguntarEliminar"
                 />
@@ -130,6 +145,50 @@ const confirmarEliminacion = async () => {
             </div>
         </div>
         <div v-if="mostrarFormulario" class="modal-backdrop fade show"></div>
+
+        <!-- Modal para Detalles -->
+        <div v-if="mostrarDetalles && profesorParaVer" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Detalles del Profesor</h5>
+                        <button type="button" class="btn-close" @click="cerrarDetalles"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <strong>Nombres:</strong>
+                                <p>{{ profesorParaVer.nombres }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Apellidos:</strong>
+                                <p>{{ profesorParaVer.apellidos }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>DNI:</strong>
+                                <p>{{ profesorParaVer.dni }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Especialidad:</strong>
+                                <p>{{ profesorParaVer.especialidad }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Teléfono:</strong>
+                                <p>{{ profesorParaVer.telefono }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <strong>Email:</strong>
+                                <p>{{ profesorParaVer.email }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @click="cerrarDetalles">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="mostrarDetalles" class="modal-backdrop fade show"></div>
 
         <!-- Modal de Confirmación -->
         <ModalConfirmacion

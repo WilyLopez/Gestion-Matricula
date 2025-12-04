@@ -131,9 +131,18 @@ export function useValidacion() {
         });
     };
 
+    const resetearCampos = (campos: Record<string, CampoValidacion>) => {
+        Object.values(campos).forEach((campo) => {
+            campo.valor = "";
+            campo.tocado = false;
+            campo.error = "";
+        });
+    };
+
     return {
         validarCampo,
         validarFormulario,
         limpiarValidacion,
+        resetearCampos,
     };
 }

@@ -62,7 +62,13 @@ export class ProfesorServicio {
     }
 
     async eliminar(id: number): Promise<Profesor> {
-        await this.obtenerPorId(id);
+        const profesor = await this.obtenerPorId(id);
+
+        if (profesor.secciones && profesor.secciones.length > 0) {
+            throw new Error(
+                "No se puede eliminar el profesor porque está asignado a una o más secciones."
+            );
+        }
 
         return await this.profesorRepositorio.eliminar(id);
     }

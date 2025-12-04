@@ -74,7 +74,13 @@ export class EstudianteServicio {
     }
 
     async eliminar(id: number): Promise<Estudiante> {
-        await this.obtenerPorId(id);
+        const estudiante = await this.obtenerPorId(id);
+
+        if (estudiante.matriculas && estudiante.matriculas.length > 0) {
+            throw new Error(
+                "No se puede eliminar el estudiante porque tiene matrículas asociadas."
+            );
+        }
 
         return await this.estudianteRepositorio.eliminar(id);
     }

@@ -1,0 +1,50 @@
+/* src/assets/estilos/global.css */
+
+:root {
+    --color-primario: #0d6efd;
+    --color-secundario: #6c757d;
+    --color-exito: #198754;
+    --color-peligro: #dc3545;
+    --color-advertencia: #ffc107;
+    --color-info: #0dcaf0;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.contenedor-principal {
+    padding: 2rem;
+}
+
+.tarjeta-sombra {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.transicion-suave {
+    transition: all 0.3s ease;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .contenedor-principal {
+        padding: 1rem;
+    }
+}

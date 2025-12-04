@@ -1,0 +1,102 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model Nivel {
+    id       Int      @id @default(autoincrement())
+    nombre   String   @db.VarChar(50)
+    creadoEn DateTime @default(now()) @map("creado_en")
+    grados   Grado[]
+
+    @@map("niveles")
+}
+
+model Grado {
+    id        Int       @id @default(autoincrement())
+    nivelId   Int       @map("nivel_id")
+    nombre    String    @db.VarChar(50)
+    creadoEn  DateTime  @default(now()) @map("creado_en")
+    nivel     Nivel     @relation(fields: [nivelId], references: [id], onDelete: Cascade)
+    secciones Seccion[]
+
+    @@map("grados")
+}
+
+model Seccion {
+    id              Int         @id @default(autoincrement())
+    gradoId         Int         @map("grado_id")
+    nombre          String      @db.VarChar(10)
+    capacidadMaxima Int         @map("capacidad_maxima")
+    turno           String      @db.VarChar(20)
+    profesorId      Int?        @map("profesor_id")
+    creadoEn        DateTime    @default(now()) @map("creado_en")
+    actualizadoEn   DateTime    @updatedAt @map("actualizado_en")
+    grado           Grado       @relation(fields: [gradoId], references: [id], onDelete: Cascade)
+    profesor        Profesor?   @relation(fields: [profesorId], references: [id], onDelete: SetNull)
+    matriculas      Matricula[]
+
+    @@unique([gradoId, nombre])
+    @@map("secciones")
+}
+
+model Profesor {
+    id            Int       @id @default(autoincrement())
+    nombres       String    @db.VarChar(100)
+    apellidos     String    @db.VarChar(100)
+    dni           String    @unique @db.VarChar(20)
+    especialidad  String    @db.VarChar(100)
+    telefono      String    @db.VarChar(20)
+    email         String    @db.VarChar(100)
+    creadoEn      DateTime  @default(now()) @map("creado_en")
+    actualizadoEn DateTime  @updatedAt @map("actualizado_en")
+    secciones     Seccion[]
+
+    @@map("profesores")
+}
+
+model Estudiante {
+    id              Int         @id @default(autoincrement())
+    nombres         String      @db.VarChar(100)
+    apellidos       String      @db.VarChar(100)
+    dni             String      @unique @db.VarChar(20)
+    fechaNacimiento DateTime    @map("fecha_nacimiento") @db.Date
+    direccion       String      @db.VarChar(255)
+    telefono        String      @db.VarChar(20)
+    creadoEn        DateTime    @default(now()) @map("creado_en")
+    actualizadoEn   DateTime    @updatedAt @map("actualizado_en")
+    matriculas      Matricula[]
+
+    @@map("estudiantes")
+}
+
+model AnioAcademico {
+    id         Int         @id @default(autoincrement())
+    anio       Int         @unique
+    esActivo   Boolean     @default(false) @map("es_activo")
+    creadoEn   DateTime    @default(now()) @map("creado_en")
+    matriculas Matricula[]
+
+    @@map("anios_academicos")
+}
+
+model Matricula {
+    id              Int           @id @default(autoincrement())
+    estudianteId    Int           @map("estudiante_id")
+    seccionId       Int           @map("seccion_id")
+    anioAcademicoId Int           @map("anio_academico_id")
+    fechaMatricula  DateTime      @default(now()) @map("fecha_matricula")
+    estado          String        @default("activa") @db.VarChar(20)
+    creadoEn        DateTime      @default(now()) @map("creado_en")
+    actualizadoEn   DateTime      @updatedAt @map("actualizado_en")
+    estudiante      Estudiante    @relation(fields: [estudianteId], references: [id], onDelete: Cascade)
+    seccion         Seccion       @relation(fields: [seccionId], references: [id], onDelete: Cascade)
+    anioAcademico   AnioAcademico @relation(fields: [anioAcademicoId], references: [id], onDelete: Cascade)
+
+    @@unique([estudianteId, seccionId, anioAcademicoId])
+    @@map("matriculas")
+}

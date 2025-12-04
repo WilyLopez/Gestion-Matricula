@@ -10,7 +10,7 @@ import Paginacion from "@/components/comunes/Paginacion.vue";
 import Cargando from "@/components/comunes/Cargando.vue";
 import Alerta from "@/components/comunes/Alerta.vue";
 import { useAlerta } from "@/composables/useAlerta";
-import { useRouter } from 'vue-router';
+import { useRouter } from "vue-router";
 
 const { alerta, mostrarAlerta, cerrarAlerta } = useAlerta();
 const estudiantes = ref<Estudiante[]>([]);
@@ -46,7 +46,10 @@ const cargarEstudiantes = async () => {
         estudiantes.value = respuesta.registros;
         totalEstudiantes.value = respuesta.total;
     } catch (error: any) {
-        mostrarAlerta("danger", `Error al cargar los estudiantes: ${error.message}`);
+        mostrarAlerta(
+            "danger",
+            `Error al cargar los estudiantes: ${error.message}`
+        );
     } finally {
         cargando.value = false;
     }
@@ -69,7 +72,6 @@ watch([estadoFiltro, paginaActual], () => {
     }
 });
 
-
 onMounted(cargarEstudiantes);
 
 const abrirFormulario = (estudiante: Estudiante | null = null) => {
@@ -85,7 +87,10 @@ const cerrarFormulario = () => {
 const guardarEstudiante = async (datos: EstudianteFormulario) => {
     try {
         if (estudianteParaEditar.value) {
-            await estudianteServicio.actualizar(estudianteParaEditar.value.id, datos);
+            await estudianteServicio.actualizar(
+                estudianteParaEditar.value.id,
+                datos
+            );
             mostrarAlerta("success", "Estudiante actualizado con éxito");
         } else {
             await estudianteServicio.crear(datos);
@@ -94,7 +99,9 @@ const guardarEstudiante = async (datos: EstudianteFormulario) => {
         await cargarEstudiantes();
         cerrarFormulario();
     } catch (error: any) {
-        const mensajeError = error.response?.data?.error || `Error al guardar el estudiante: ${error.message}`;
+        const mensajeError =
+            error.response?.data?.error ||
+            `Error al guardar el estudiante: ${error.message}`;
         mostrarAlerta("danger", mensajeError);
     }
 };
@@ -117,7 +124,9 @@ const confirmarEliminacion = async () => {
         await cargarEstudiantes();
         cerrarConfirmacion();
     } catch (error: any) {
-        const mensajeError = error.response?.data?.error || `Error al eliminar el estudiante: ${error.message}`;
+        const mensajeError =
+            error.response?.data?.error ||
+            `Error al eliminar el estudiante: ${error.message}`;
         mostrarAlerta("danger", mensajeError);
         cerrarConfirmacion();
     }
@@ -132,7 +141,6 @@ const cerrarDetalles = () => {
     mostrarDetalles.value = false;
     estudianteParaVer.value = null;
 };
-
 </script>
 
 <template>
@@ -146,12 +154,14 @@ const cerrarDetalles = () => {
                 Añadir Estudiante
             </button>
         </div>
-                <div class="card shadow">
+        <div class="card shadow">
             <div class="card-header">
                 <div class="row gy-3">
                     <div class="col-md-6">
                         <div class="input-group">
-                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <span class="input-group-text"
+                                ><i class="bi bi-search"></i
+                            ></span>
                             <input
                                 type="text"
                                 class="form-control"
@@ -180,24 +190,40 @@ const cerrarDetalles = () => {
                 />
             </div>
             <div class="card-footer d-flex justify-content-end">
-                <Paginacion
-                    :pagina-actual="paginaActual"
-                    :total-items="totalEstudiantes"
-                    :items-por-pagina="limitePorPagina"
-                    @update:pagina-actual="paginaActual = $event"
-                />
+                <div class="card-footer d-flex justify-content-end">
+                    <Paginacion
+                        :pagina-actual="paginaActual"
+                        :total-paginas="
+                            Math.ceil(totalEstudiantes / limitePorPagina)
+                        "
+                        @cambiar-pagina="paginaActual = $event"
+                    />
+                </div>
             </div>
         </div>
 
         <!-- Modal para Formulario -->
-        <div v-if="mostrarFormulario" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div
+            v-if="mostrarFormulario"
+            class="modal fade show d-block"
+            tabindex="-1"
+            style="background-color: rgba(0, 0, 0, 0.5)"
+        >
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">
-                            {{ estudianteParaEditar ? 'Editar Estudiante' : 'Nuevo Estudiante' }}
+                            {{
+                                estudianteParaEditar
+                                    ? "Editar Estudiante"
+                                    : "Nuevo Estudiante"
+                            }}
                         </h5>
-                        <button type="button" class="btn-close" @click="cerrarFormulario"></button>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            @click="cerrarFormulario"
+                        ></button>
                     </div>
                     <div class="modal-body">
                         <FormularioEstudiante
@@ -212,12 +238,21 @@ const cerrarDetalles = () => {
         <div v-if="mostrarFormulario" class="modal-backdrop fade show"></div>
 
         <!-- Modal para Detalles -->
-        <div v-if="mostrarDetalles && estudianteParaVer" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div
+            v-if="mostrarDetalles && estudianteParaVer"
+            class="modal fade show d-block"
+            tabindex="-1"
+            style="background-color: rgba(0, 0, 0, 0.5)"
+        >
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Detalles del Estudiante</h5>
-                        <button type="button" class="btn-close" @click="cerrarDetalles"></button>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            @click="cerrarDetalles"
+                        ></button>
                     </div>
                     <div class="modal-body">
                         <div class="row">
@@ -235,7 +270,13 @@ const cerrarDetalles = () => {
                             </div>
                             <div class="col-md-6 mb-3">
                                 <strong>Fecha de Nacimiento:</strong>
-                                <p>{{ new Date(estudianteParaVer.fechaNacimiento).toLocaleDateString('es-ES') }}</p>
+                                <p>
+                                    {{
+                                        new Date(
+                                            estudianteParaVer.fechaNacimiento
+                                        ).toLocaleDateString("es-ES")
+                                    }}
+                                </p>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <strong>Teléfono:</strong>
@@ -247,16 +288,34 @@ const cerrarDetalles = () => {
                             </div>
                             <div class="col-md-6 mb-3">
                                 <strong>Fecha de Creación:</strong>
-                                <p>{{ new Date(estudianteParaVer.creadoEn).toLocaleDateString('es-ES') }}</p>
+                                <p>
+                                    {{
+                                        new Date(
+                                            estudianteParaVer.creadoEn
+                                        ).toLocaleDateString("es-ES")
+                                    }}
+                                </p>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <strong>Última Actualización:</strong>
-                                <p>{{ new Date(estudianteParaVer.actualizadoEn).toLocaleDateString('es-ES') }}</p>
+                                <p>
+                                    {{
+                                        new Date(
+                                            estudianteParaVer.actualizadoEn
+                                        ).toLocaleDateString("es-ES")
+                                    }}
+                                </p>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @click="cerrarDetalles">Cerrar</button>
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            @click="cerrarDetalles"
+                        >
+                            Cerrar
+                        </button>
                     </div>
                 </div>
             </div>

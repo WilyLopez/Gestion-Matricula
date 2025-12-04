@@ -10,7 +10,7 @@ const formattedDate = computed(() => {
   
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-  return `[${capitalize(weekday)}, ${capitalize(month)}, ${year}]`;
+  return `${capitalize(weekday)}, ${capitalize(month)}, ${year}`;
 });
 </script>
 

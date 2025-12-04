@@ -1,6 +1,6 @@
 <!-- src/vistas/SeccionesVista.vue -->
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { Seccion, SeccionFormulario, Nivel, Grado } from "@/tipos";
 import { seccionServicio } from "@/servicios/seccionServicio";
 import { nivelServicio } from "@/servicios/nivelServicio";
@@ -14,7 +14,7 @@ import Alerta from "@/components/comunes/Alerta.vue";
 import { useAlerta } from "@/composables/useAlerta";
 
 const { alerta, mostrarAlerta, cerrarAlerta } = useAlerta();
-const secciones = ref<Seccion[]>([]);
+const todasLasSecciones = ref<Seccion[]>([]); // Almacena todas las secciones
 const cargando = ref(true);
 
 // State for modals
@@ -33,23 +33,49 @@ const grados = ref<Grado[]>([]);
 
 // State for pagination
 const paginaActual = ref(1);
-const totalPaginas = ref(1);
 const limitePorPagina = 10;
+
+// Computed para filtrar y paginar localmente
+const seccionesFiltradas = computed(() => {
+    let filtradas = todasLasSecciones.value;
+
+    // Filtrar por nivel
+    if (filtroNivelId.value) {
+        filtradas = filtradas.filter(
+            (seccion) => seccion.grado?.nivel?.id === filtroNivelId.value
+        );
+    }
+
+    // Filtrar por grado
+    if (filtroGradoId.value) {
+        filtradas = filtradas.filter(
+            (seccion) => seccion.grado?.id === filtroGradoId.value
+        );
+    }
+
+    return filtradas;
+});
+
+const seccionesPaginas = computed(() => {
+    const inicio = (paginaActual.value - 1) * limitePorPagina;
+    const fin = inicio + limitePorPagina;
+    return seccionesFiltradas.value.slice(inicio, fin);
+});
+
+const totalPaginas = computed(() => {
+    return Math.ceil(seccionesFiltradas.value.length / limitePorPagina);
+});
 
 const cargarSecciones = async () => {
     cargando.value = true;
     try {
-        const opciones = {
-            nivelId: filtroNivelId.value || undefined,
-            gradoId: filtroGradoId.value || undefined,
-            pagina: paginaActual.value,
-            limite: limitePorPagina,
-        };
-        const respuesta = await seccionServicio.obtenerTodas(opciones);
-        secciones.value = respuesta.secciones;
-        totalPaginas.value = Math.ceil(respuesta.total / limitePorPagina);
+        // Obtener todas las secciones sin filtros
+        todasLasSecciones.value = await seccionServicio.obtenerTodas();
     } catch (error: any) {
-        mostrarAlerta("danger", `Error al cargar las secciones: ${error.message}`);
+        mostrarAlerta(
+            "danger",
+            `Error al cargar las secciones: ${error.message}`
+        );
     } finally {
         cargando.value = false;
     }
@@ -66,6 +92,7 @@ const cargarNivelesYGrados = async () => {
 watch(filtroNivelId, async (nuevoNivelId) => {
     filtroGradoId.value = null;
     grados.value = [];
+
     if (nuevoNivelId) {
         try {
             grados.value = await gradoServicio.obtenerPorNivel(nuevoNivelId);
@@ -73,22 +100,19 @@ watch(filtroNivelId, async (nuevoNivelId) => {
             mostrarAlerta("danger", `Error al cargar grados: ${error.message}`);
         }
     }
-    if (paginaActual.value !== 1) {
-        paginaActual.value = 1;
-    } else {
-        cargarSecciones();
-    }
+
+    // Resetear a página 1 cuando cambia el filtro
+    paginaActual.value = 1;
 });
 
 watch(filtroGradoId, () => {
-    if (paginaActual.value !== 1) {
-        paginaActual.value = 1;
-    } else {
-        cargarSecciones();
-    }
+    // Resetear a página 1 cuando cambia el filtro
+    paginaActual.value = 1;
 });
 
-watch(paginaActual, cargarSecciones);
+watch(paginaActual, () => {
+    // Solo actualiza la paginación, ya que los datos ya están cargados
+});
 
 onMounted(() => {
     cargarSecciones();
@@ -99,7 +123,6 @@ const cambiarPagina = (pagina: number) => {
     paginaActual.value = pagina;
 };
 
-// ... (other methods remain the same)
 const abrirFormulario = (seccion: Seccion | null = null) => {
     seccionParaEditar.value = seccion;
     mostrarFormulario.value = true;
@@ -119,10 +142,13 @@ const guardarSeccion = async (datos: SeccionFormulario) => {
             await seccionServicio.crear(datos);
             mostrarAlerta("success", "Sección creada con éxito");
         }
+        // Recargar las secciones después de guardar
         await cargarSecciones();
         cerrarFormulario();
     } catch (error: any) {
-        const mensajeError = error.response?.data?.error || `Error al guardar la sección: ${error.message}`;
+        const mensajeError =
+            error.response?.data?.error ||
+            `Error al guardar la sección: ${error.message}`;
         mostrarAlerta("danger", mensajeError);
     }
 };
@@ -145,7 +171,9 @@ const confirmarEliminacion = async () => {
         await cargarSecciones();
         cerrarConfirmacion();
     } catch (error: any) {
-        const mensajeError = error.response?.data?.error || `Error al eliminar la sección: ${error.message}`;
+        const mensajeError =
+            error.response?.data?.error ||
+            `Error al eliminar la sección: ${error.message}`;
         mostrarAlerta("danger", mensajeError);
         cerrarConfirmacion();
     }
@@ -160,7 +188,6 @@ const cerrarDetalles = () => {
     mostrarDetalles.value = false;
     seccionParaVer.value = null;
 };
-
 </script>
 
 <template>
@@ -174,63 +201,110 @@ const cerrarDetalles = () => {
                 Añadir Sección
             </button>
         </div>
-        
+
         <!-- Filtros -->
         <div class="card shadow mb-4">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-5">
-                        <label for="filtroNivel" class="form-label">Filtrar por Nivel</label>
-                        <select id="filtroNivel" class="form-select" v-model="filtroNivelId">
+                        <label for="filtroNivel" class="form-label"
+                            >Filtrar por Nivel</label
+                        >
+                        <select
+                            id="filtroNivel"
+                            class="form-select"
+                            v-model="filtroNivelId"
+                        >
                             <option :value="null">Todos los niveles</option>
-                            <option v-for="nivel in niveles" :key="nivel.id" :value="nivel.id">
+                            <option
+                                v-for="nivel in niveles"
+                                :key="nivel.id"
+                                :value="nivel.id"
+                            >
                                 {{ nivel.nombre }}
                             </option>
                         </select>
                     </div>
                     <div class="col-md-5">
-                        <label for="filtroGrado" class="form-label">Filtrar por Grado</label>
-                        <select id="filtroGrado" class="form-select" v-model="filtroGradoId" :disabled="!filtroNivelId">
+                        <label for="filtroGrado" class="form-label"
+                            >Filtrar por Grado</label
+                        >
+                        <select
+                            id="filtroGrado"
+                            class="form-select"
+                            v-model="filtroGradoId"
+                            :disabled="!filtroNivelId"
+                        >
                             <option :value="null">Todos los grados</option>
-                            <option v-for="grado in grados" :key="grado.id" :value="grado.id">
+                            <option
+                                v-for="grado in grados"
+                                :key="grado.id"
+                                :value="grado.id"
+                            >
                                 {{ grado.nombre }}
                             </option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <div class="text-muted small">
+                            Mostrando {{ seccionesPaginas.length }} de
+                            {{ seccionesFiltradas.length }} secciones
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
 
         <div class="card shadow">
             <div class="card-body">
                 <Cargando v-if="cargando" />
                 <TablaSecciones
                     v-else
-                    :secciones="secciones"
+                    :secciones="seccionesPaginas"
                     @ver="verDetalles"
                     @editar="abrirFormulario"
                     @eliminar="preguntarEliminar"
                 />
             </div>
-            <div class="card-footer" v-if="!cargando && secciones.length > 0">
-                 <Paginacion 
-                    :paginaActual="paginaActual" 
+            <div
+                class="card-footer"
+                v-if="!cargando && seccionesFiltradas.length > 0"
+            >
+                <Paginacion
+                    :paginaActual="paginaActual"
                     :totalPaginas="totalPaginas"
                     @cambiar-pagina="cambiarPagina"
                 />
             </div>
+            <div class="card-footer" v-else-if="!cargando">
+                <div class="text-center text-muted">
+                    No hay secciones para mostrar
+                </div>
+            </div>
         </div>
 
         <!-- Modals... -->
-        <div v-if="mostrarFormulario" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div
+            v-if="mostrarFormulario"
+            class="modal fade show d-block"
+            tabindex="-1"
+            style="background-color: rgba(0, 0, 0, 0.5)"
+        >
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">
-                            {{ seccionParaEditar ? 'Editar Sección' : 'Nueva Sección' }}
+                            {{
+                                seccionParaEditar
+                                    ? "Editar Sección"
+                                    : "Nueva Sección"
+                            }}
                         </h5>
-                        <button type="button" class="btn-close" @click="cerrarFormulario"></button>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            @click="cerrarFormulario"
+                        ></button>
                     </div>
                     <div class="modal-body">
                         <FormularioSeccion
@@ -244,12 +318,21 @@ const cerrarDetalles = () => {
         </div>
         <div v-if="mostrarFormulario" class="modal-backdrop fade show"></div>
 
-        <div v-if="mostrarDetalles && seccionParaVer" class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div
+            v-if="mostrarDetalles && seccionParaVer"
+            class="modal fade show d-block"
+            tabindex="-1"
+            style="background-color: rgba(0, 0, 0, 0.5)"
+        >
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title">Detalles de la Sección</h5>
-                        <button type="button" class="btn-close" @click="cerrarDetalles"></button>
+                        <button
+                            type="button"
+                            class="btn-close"
+                            @click="cerrarDetalles"
+                        ></button>
                     </div>
                     <div class="modal-body">
                         <div class="row">
@@ -267,7 +350,9 @@ const cerrarDetalles = () => {
                             </div>
                             <div class="col-md-6 mb-3">
                                 <strong>Turno:</strong>
-                                <p class="text-capitalize">{{ seccionParaVer.turno }}</p>
+                                <p class="text-capitalize">
+                                    {{ seccionParaVer.turno }}
+                                </p>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <strong>Capacidad Máxima:</strong>
@@ -275,13 +360,22 @@ const cerrarDetalles = () => {
                             </div>
                             <div class="col-md-6 mb-3">
                                 <strong>Profesor Tutor:</strong>
-                                <p v-if="seccionParaVer.profesor">{{ seccionParaVer.profesor.nombres }} {{ seccionParaVer.profesor.apellidos }}</p>
+                                <p v-if="seccionParaVer.profesor">
+                                    {{ seccionParaVer.profesor.nombres }}
+                                    {{ seccionParaVer.profesor.apellidos }}
+                                </p>
                                 <p v-else>Sin asignar</p>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @click="cerrarDetalles">Cerrar</button>
+                        <button
+                            type="button"
+                            class="btn btn-secondary"
+                            @click="cerrarDetalles"
+                        >
+                            Cerrar
+                        </button>
                     </div>
                 </div>
             </div>
